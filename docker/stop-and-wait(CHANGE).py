@@ -1,3 +1,5 @@
+import socket
+PACKET_SIZE = 1024
 # What is stop and wait over UDP?
 
 # simple error-control for reliable data over unreliable transport layer by sending
@@ -13,9 +15,22 @@
 # 4. if receive ack stop timer and send next packet
 
 # convert MP3 file into data
+from pydub import AudioSegment # this is a library I found https://stackoverflow.com/questions/16634128/how-to-extract-the-raw-data-from-a-mp3-file-using-python
+sound = AudioSegment.from_mp3("file.mp3")
+raw_data = sound._data
 
+# create a socket 
+server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+# bind to IPv4 Address and port (specified from receiver.py)
+server.bind(("0.0.0.0", 5001))
+# send packets
+server.sendto("hello client".encode('utf-8'), address) 
 
 # start a while loop that does not end until done sending packets
 while true:
-    # send packets
-    socket.sendto() 
+    timeouts = 0
+    try:
+        message, address = server.recvfrom(PACKET_SIZE)
+        
+        
+    
