@@ -1,6 +1,9 @@
 import socket
 PACKET_SIZE = 1024
 # What is stop and wait over UDP?
+SEQ__ID_SIZE = 4 # 4 bytes for seuqence ID
+MESSAGE_SIZE = PACKET_SIZE - SEQ__ID_SIZE # 1020 bytes for message
+
 
 # simple error-control for reliable data over unreliable transport layer by sending
 # one packet at a time. 
@@ -32,5 +35,12 @@ while true:
     try:
         message, address = server.recvfrom(PACKET_SIZE)
         
-        
+# Noah's Contributions using DISC reference [<- Remember to DELETE THIS!!!]
+# Send one packet
+# Start timer
+# Wait for ACK
+# If ACK received, stop timer and send next packet
+# If timeout, retransmit packet and restart timer
+# Send FIN packet when done
+
     
