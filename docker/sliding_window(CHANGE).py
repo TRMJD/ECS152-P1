@@ -27,7 +27,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
     window = {} # seq_id -> packet
 
     # Sending Loop
-    while LAR < len(data) - 1:
+    while LAR < len(data):
         while (LFS - LAR) < SWS * MESSAGE_SIZE and LFS < len(data):
             payload = data[LFS:LFS + MESSAGE_SIZE]
             packet = struct.pack('>I', LFS) + payload
@@ -55,7 +55,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
                 udp_socket.sendto(packet, ('localhost', 5001))
 
     # Sending the closing taken from sample
-    fin_packet = struct.pack('>I', LFS) + b''
+    fin_packet = struct.pack('>i', -1)
     udp_socket.sendto(fin_packet, ('localhost', 5001))
 
 # Sender has up to SWS unacknowledged packets in flight
