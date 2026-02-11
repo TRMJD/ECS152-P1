@@ -22,15 +22,19 @@ TIMEOUT = 1.0 # not sure how long we must wait for timeout
 # If timeout, retransmit packet and restart timer
 # Send FIN packet when done
 
-# convert MP3 file into data
-# from pydub import AudioSegment # this is a library I found https://stackoverflow.com/questions/16634128/how-to-extract-the-raw-data-from-a-mp3-file-using-python
-# sound = AudioSegment.from_mp3("file.mp3")
-# raw_data = sound._data 
+FILE_PATH = "file.mp3"   
+print("[DEBUG] Opening:", FILE_PATH)
 
-with open("/hdd/file.mp3", "rb") as f:
+with open("file.mp3", "rb") as f:
     raw_data = f.read()
 
+print("[DEBUG] File loaded. Bytes:", len(raw_data))
+
 # HELPER FUNCTIONS
+
+def round_up_7(x: float) -> float:
+    return math.ceil(x * 1e7) / 1e7
+
 # this is adapted from receiver.py
 def create_packet(seq_id: int, payload: bytes) -> bytes:
     return int.to_bytes(seq_id, SEQ__ID_SIZE, signed=True, byteorder="big") + payload
@@ -43,10 +47,12 @@ def parse_ack_id(ack_packet: bytes) -> int:
 server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # destination(specified from receiver.py)
 destination = ("127.0.0.1", 5001)
+print("[DEBUG] Destination:", destination)
+
 # send packets
-# server.sendto("hello client".encode('utf-8'), address) # this is a test line that must be deleted!
+
 # start throughput timer
-start_time = time.monotonic() 
+overall_start = time.monotonic() 
 # start a while loop that does not end until done sending packets
 server.settimeout(TIMEOUT)
 # Track per-packet delay:
@@ -55,7 +61,8 @@ first_send_time = {}  # seq_id(byte offset) -> time first sent
 ack_time = {}         # seq_id(byte offset) -> time ack received
 
 offset = 0 # seq id
-
+packet_count = 0
+timeouts = 0
 # send file in 1020 byte chunks, stop and wait
 while offset < len(raw_data): 
     payload = raw_data[offset: offset + MESSAGE_SIZE]
@@ -67,11 +74,18 @@ while offset < len(raw_data):
     try:
         # send packet
         server.sendto(packet, destination)
+        packet_count += 1
+         
+        # Print progress occasionally
+        if packet_count % 100 == 0:
+            print(f"[DEBUG] Sent packet #{packet_count}, offset={offset}, payload_len={len(payload)}, timeouts={timeouts}")
+
 
         # wait for ACK
         reply_packet, _client = server.recvfrom(PACKET_SIZE)
         ack_id = parse_ack_id(reply_packet)
-
+        msg = reply_packet[SEQ__ID_SIZE:]
+        print(f"[DEBUG] Got reply from {_client}: ack_id={ack_id}, msg={msg!r}")
         # receiver ACK is cumulative "next expected byte" (byte offset)
         # this packet is considered acknowledged if ACK covers the end of this chunk
         if ack_id >= offset + len(payload):
@@ -85,15 +99,21 @@ while offset < len(raw_data):
 # FIN handshake 
 # send empty payload packet at final offset
 eof_offset = offset
-server.sendto(create_packet(eof_offset, b""), destination)
+eof_packet = create_packet(eof_offset, b"")
 
 # wait for receiver's fin, send FINACK
 while True:
-    packet, _ = server.recvfrom(PACKET_SIZE) # _ since we do not need address of sender
-    message = packet[SEQ__ID_SIZE:]
-    if message == b"fin":
-        server.sendto(create_packet(eof_offset, b"==FINACK=="), destination)
-        break
+    server.sendto(eof_packet, destination)
+    try:
+        packet, _ = server.recvfrom(PACKET_SIZE) # _ since we do not need address of sender
+        message = packet[SEQ__ID_SIZE:]
+    
+        if message == b"fin":
+            server.sendto(create_packet(eof_offset, b"==FINACK=="), destination)
+            break
+    except socket.timeout:
+        continue
+
 # end timer & close socket
 overall_end = time.monotonic() 
 server.close()
