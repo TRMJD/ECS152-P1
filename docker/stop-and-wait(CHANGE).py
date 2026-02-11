@@ -23,16 +23,19 @@ TIMEOUT = 1.0 # not sure how long we must wait for timeout
 # Send FIN packet when done
 
 # convert MP3 file into data
-from pydub import AudioSegment # this is a library I found https://stackoverflow.com/questions/16634128/how-to-extract-the-raw-data-from-a-mp3-file-using-python
-sound = AudioSegment.from_mp3("file.mp3")
-raw_data = sound._data 
+# from pydub import AudioSegment # this is a library I found https://stackoverflow.com/questions/16634128/how-to-extract-the-raw-data-from-a-mp3-file-using-python
+# sound = AudioSegment.from_mp3("file.mp3")
+# raw_data = sound._data 
+
+with open("/hdd/file.mp3", "rb") as f:
+    raw_data = f.read()
 
 # HELPER FUNCTIONS
 # this is adapted from receiver.py
 def create_packet(seq_id: int, payload: bytes) -> bytes:
     return int.to_bytes(seq_id, SEQ__ID_SIZE, signed=True, byteorder="big") + payload
 
-def ack_id(ack: bytes) -> int:
+def parse_ack_id(ack_packet: bytes) -> int:
     # ACK packet format: 4 byte signed seq_id + b 'ack'
     return int.from_bytes(ack_packet[:SEQ__ID_SIZE], signed=True, byteorder="big")
 
@@ -41,7 +44,7 @@ server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # destination(specified from receiver.py)
 destination = ("127.0.0.1", 5001)
 # send packets
-server.sendto("hello client".encode('utf-8'), address) # this is a test line that must be deleted!
+# server.sendto("hello client".encode('utf-8'), address) # this is a test line that must be deleted!
 # start throughput timer
 start_time = time.monotonic() 
 # start a while loop that does not end until done sending packets
@@ -67,7 +70,7 @@ while offset < len(raw_data):
 
         # wait for ACK
         reply_packet, _client = server.recvfrom(PACKET_SIZE)
-        ack_id = ack_id(reply_packet)
+        ack_id = parse_ack_id(reply_packet)
 
         # receiver ACK is cumulative "next expected byte" (byte offset)
         # this packet is considered acknowledged if ACK covers the end of this chunk
@@ -109,7 +112,8 @@ throughput = round_up_7(throughput)
 avg_delay = round_up_7(avg_delay)
 metric = round_up_7(metric)
 
-print(throughput,avg_delay,metric)
+print(f"{throughput:.7f},{avg_delay:.7f},{metric:.7f}")
+
 
 
         
