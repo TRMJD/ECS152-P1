@@ -76,16 +76,16 @@ while offset < len(raw_data):
         server.sendto(packet, destination)
         packet_count += 1
          
-        # # Print progress occasionally
+        # Print progress occasionally
         # if packet_count % 100 == 0:
-        #     print(f"[DEBUG] Sent packet #{packet_count}, offset={offset}, payload_len={len(payload)}, timeouts={timeouts}")
+        
 
 
         # wait for ACK
         reply_packet, _client = server.recvfrom(PACKET_SIZE)
         ack_id = parse_ack_id(reply_packet)
         msg = reply_packet[SEQ__ID_SIZE:]
-        # print(f"[DEBUG] Got reply from {_client}: ack_id={ack_id}, msg={msg!r}")
+        
         # receiver ACK is cumulative "next expected byte" (byte offset)
         # this packet is considered acknowledged if ACK covers the end of this chunk
         if ack_id >= offset + len(payload):
@@ -103,7 +103,7 @@ while offset < len(raw_data):
 # send empty payload packet at final offset
 eof_offset = offset
 eof_packet = create_packet(eof_offset, b"")
-# print("[DEBUG] Sending EOF packet (empty payload) with seq_id:", eof_offset)
+
 # wait for receiver's fin, send FINACK
 while True:
     server.sendto(eof_packet, destination)
@@ -135,10 +135,8 @@ throughput = round_up_7(throughput)
 avg_delay = round_up_7(avg_delay)
 metric = round_up_7(metric)
 
-# print("[DEBUG] DONE. Final output line below:")
 print(f"{throughput:.7f},{avg_delay:.7f},{metric:.7f}")
 print("AVERAGES: 5380.454145, 0.1896234, 5.3077846")
-print("STANDARD DEVIATIONS: 135.7662292, 0.0047924, 0.13397")
 
 
 
