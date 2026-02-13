@@ -92,9 +92,7 @@ def run_test():
 if __name__ == "__main__":
     t, d, m = run_test()
     # Prints 3 lines, rounded to 7 decimals
-    print(f"{t:.7f}")
-    print(f"{d:.7f}")
-    print(f"{m:.7f}")
+    print(f"{t:.7f},{d:.7f},{m:.7f}")
 
 # Performance Metrics       (Throughput, Average Delay, Performance)
     # Averages:             92989.58989584, 1.08521647, 28.54343032
