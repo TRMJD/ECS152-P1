@@ -8,12 +8,15 @@ PACKET_SIZE = 1024
 SEQ_ID_SIZE = 4
 MESSAGE_SIZE = PACKET_SIZE - SEQ_ID_SIZE
 SWS = 100
-TIMEOUT = 0.5
+TIMEOUT = 2.0
 
 # data reading taken from sample sender.
 def run_test():
     with open('file.mp3', 'rb') as f:
         data = f.read()
+
+    # Start timer when socket is created
+    start_time = time.time()
 
     # creates/config UDP socket taken from sender
     # IPv4, UDP, will have sliding window on top of this
@@ -23,7 +26,6 @@ def run_test():
         udp_socket.settimeout(TIMEOUT)
 
         # Tracking metrics
-        start_time = time.time()
         packet_delays = []
         send_times = {} # Track first send time for each offset
 
@@ -31,6 +33,7 @@ def run_test():
         LAR = 0 # Last ACK Received
         LFS = 0 # Last Frame Sent
         window = {} # seq_id -> packet
+        timeouts = 0
 
         # Sending Loop
         while LAR < len(data):
@@ -38,14 +41,13 @@ def run_test():
             while (LFS - LAR) < SWS * MESSAGE_SIZE and LFS < len(data):
                 payload = data[LFS:LFS + MESSAGE_SIZE]
                 packet = struct.pack('>I', LFS) + payload
-
                 if LFS not in send_times:
-                    send_times[LFS] = time.time() #REMOVE
-                
-                udp_socket.sendto(packet, ('localhost', 5001))
+                    send_times[LFS] = time.time()
+
+                udp_socket.sendto(packet, ('172.17.0.2', 5001))
                 window[LFS] = packet
                 LFS += MESSAGE_SIZE
-            
+
             # waits for ACK's, updates ACK's received and moves window forward
             try:
                 ack, _ = udp_socket.recvfrom(PACKET_SIZE)
@@ -53,23 +55,33 @@ def run_test():
 
                 # Uses Cumulative ACK
                 if ack_seq > LAR:
-                    current_time = time.time() #REMOVE--
-                    for offset in list(send_times.keys()):
-                        if offset < ack_seq:
-                            packet_delays.append(current_time - send_times[offset])
-                            del send_times[offset] #REMOVE--
+                    current_time = time.time()
+                    ackd_offsets = [off for off in list(send_times.keys()) if off < ack_seq]
+                    for offset in ackd_offsets:
+                        packet_delays.append(current_time - send_times[offset])
+                        del send_times[offset]
+                        if offset in window:
+                            del window[offset]
                     LAR = ack_seq
-                    # Slide window only keeping packets that haven't been ACK'd
-                    window = {seq: pkt for seq, pkt in window.items() if seq >= LAR} #REMOVE
+                    # Resets timeouts on success
+                    timeouts = 0 
 
             except socket.timeout:
+                timeouts += 1
                 # Retransmits all packets in window on timeout
-                for pkt in window.values(): 
-                    udp_socket.sendto(pkt, ('localhost', 5001))
+                if timeouts > 100: 
+                        return 0, 0, 0 
+                current_window_seqs = sorted(window.keys())
+                for seq_key in current_window_seqs:
+                        if seq_key in window: 
+                                        udp_socket.sendto(window[seq_key], ('172.17.0.2', 5001))
+
 
         # Sending the closing taken from sample
         total_time = time.time() - start_time
-        udp_socket.sendto(struct.pack('>i', -1) + b'', ('localhost', 5001)) # Send FIN packet
+        for _ in range(5):
+                # Send FIN Packet
+                udp_socket.sendto(struct.pack('>i', -1) + b'==FINACK==', ('172.17.0.2', 5001))
 
         # Print metrics
         throughput = len(data) / total_time
@@ -78,11 +90,11 @@ def run_test():
         return throughput, avg_delay, performance
 
 if __name__ == "__main__":
-    results = [run_test() for _ in range(10)]
+    t, d, m = run_test()
     # Prints 3 lines, rounded to 7 decimals
-    for i in range(3):
-        avg = sum(r[i] for r in results) / 10
-        print(f"{avg:.7f}")
+    print(f"{t:.7f}")
+    print(f"{d:.7f}")
+    print(f"{m:.7f}")
 
 # Sender has up to SWS unacknowledged packets in flight
 
@@ -100,3 +112,11 @@ if __name__ == "__main__":
     # Accepts packets between NFE and NFE+RWS-1
     # Only delivers packets when all earlier ones have been received
     # Sends CUMULATIVE ACK for highest consecutive packet
+
+# Performance Metrics       (Throughput, Average Delay, Performance)
+    # Averages:             92989.58989584, 1.08521647, 28.54343032
+    # Standard Deviations:  4917.5367449, 0.0569122, 1.5069661
+
+
+
+
