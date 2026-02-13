@@ -44,7 +44,7 @@ def run_test():
                 if LFS not in send_times:
                     send_times[LFS] = time.time()
 
-                udp_socket.sendto(packet, ('172.17.0.2', 5001))
+                udp_socket.sendto(packet, ('localhost', 5001))
                 window[LFS] = packet
                 LFS += MESSAGE_SIZE
 
@@ -74,14 +74,14 @@ def run_test():
                 current_window_seqs = sorted(window.keys())
                 for seq_key in current_window_seqs:
                         if seq_key in window: 
-                                        udp_socket.sendto(window[seq_key], ('172.17.0.2', 5001))
+                                        udp_socket.sendto(window[seq_key], ('localhost', 5001))
 
 
         # Sending the closing taken from sample
         total_time = time.time() - start_time
         for _ in range(5):
                 # Send FIN Packet
-                udp_socket.sendto(struct.pack('>i', -1) + b'==FINACK==', ('172.17.0.2', 5001))
+                udp_socket.sendto(struct.pack('>i', -1) + b'==FINACK==', ('localhost', 5001))
 
         # Print metrics
         throughput = len(data) / total_time
@@ -96,27 +96,7 @@ if __name__ == "__main__":
     print(f"{d:.7f}")
     print(f"{m:.7f}")
 
-# Sender has up to SWS unacknowledged packets in flight
-
-# Maintains Last ACK Received, Last Frame Sent, and LFD - LAR <= SWS
-
-# Uses a Sender
-    # Can send if window isn't full
-    # Sets a timer for each packet
-    # Retransmits it timer expires
-    # Uses CUMULATIVE ACKS to slide window forward
-
-# Uses a Receiver
-    # Has a Receiver Window Size
-    # Maintains Next Frame Expected
-    # Accepts packets between NFE and NFE+RWS-1
-    # Only delivers packets when all earlier ones have been received
-    # Sends CUMULATIVE ACK for highest consecutive packet
-
 # Performance Metrics       (Throughput, Average Delay, Performance)
     # Averages:             92989.58989584, 1.08521647, 28.54343032
     # Standard Deviations:  4917.5367449, 0.0569122, 1.5069661
-
-
-
 
