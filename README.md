@@ -1,22 +1,133 @@
-#  ECS 152A Programming Assignment 3 (Fall 2024)
+# Reliable UDP File Transfer & Congestion Control
 
-Check the `How to use` section of the README for instructions on indicating the end of sending data.
+Implementation of reliable file transfer protocols over UDP using Python socket programming.
 
-## Congestion Control
-Derived from https://github.com/Haroon96/ecs152a-fall-2023/tree/main/week7
-### Docker Installation
-* [Linux](https://docs.docker.com/engine/install/ubuntu/)
-* [Mac](https://docs.docker.com/desktop/install/mac-install/)
-* [Windows](https://docs.docker.com/desktop/install/windows-install/)
+This project explores how reliable data transmission can be implemented over an unreliable transport protocol through packet sequencing, acknowledgments, retransmission logic, and performance measurement.
 
-### How to use
-(From the `docker` directory).
-1. Run `./start-simulator.sh` to start running our receiver with the emulated network profile. Once it's running successfully, you will see a message saying `Receiver running`. 
-2. The receiver has already been programmed to send acknowledgements to the sender similar to the receiver in the [discussion](https://github.com/Haroon96/ecs152a-fall-2023/blob/main/week7/docker/receiver.py).
-3. Implement your own sender code and bind it to any port other than `5001`. Invoke your sender to send packets to `localhost`, port `5001` to communicate with the receiver.
-4. Finally, on sending all the data, sender should send an empty message with the correct sequence id.
-5. Receiver will then send an ack and fin message for the sender to know it's been acknowledged. (Lines 55 to 59 in receiver.py)
-6. The sender should then send a message with body '==FINACK' to let the receiver know to exit (see line 31 and 32 in receiver.py)
-7. Both sender and receiver will then exit.
+---
 
-#### You are *not* supposed to make changes to any file in this repository.
+## Project Overview
+
+The goal of this project was to implement and evaluate reliable UDP transmission under simulated network conditions using a provided Docker-based network emulation environment.
+
+Implemented protocols include:
+
+* Stop-and-Wait ARQ
+* Fixed Sliding Window
+* Additional congestion-control experiments
+
+The sender transmits file data in fixed-size packets while tracking acknowledgments, retransmissions, throughput, and packet delay.
+
+---
+
+## Contributions 
+
+Clarence D.
+-----------
+My primary contribution was implementing the **Stop-and-Wait reliable transfer protocol**.
+
+This included:
+
+* Packet construction with sequence numbering
+* ACK parsing and validation
+* Timeout detection
+* Retransmission logic
+* FIN / FINACK termination handshake
+* Throughput and average packet delay measurement
+* Performance metric computation
+
+---
+
+## Technical Concepts Demonstrated
+
+* UDP Socket Programming
+* Reliable Data Transfer
+* Stop-and-Wait ARQ
+* Packet Sequencing
+* ACK Handling
+* Timeout-Based Retransmission
+* Network Performance Analysis
+* Transport Layer Reliability
+
+---
+
+## Stop-and-Wait Protocol Workflow
+
+1. Sender transmits a packet
+2. Sender starts timeout timer
+3. Receiver returns acknowledgment
+4. Sender validates ACK
+5. If timeout occurs, packet is retransmitted
+6. Process repeats until file transfer completes
+7. FIN / FINACK handshake terminates transmission
+
+---
+
+## Performance Metrics
+
+The implementation measures:
+
+### Throughput
+
+Total bytes transmitted divided by transfer time
+
+### Average Packet Delay
+
+Time elapsed between first packet transmission and acknowledgment
+
+### Performance Metric
+
+Metric = 0.3 × (Throughput / 1000) + 0.7 × (1 / Average Delay)
+
+---
+
+## Environment
+
+This project uses a Docker-based network emulation environment provided as course infrastructure for testing packet transmission behavior under simulated network conditions.
+
+The reliable sender protocol implementation was independently developed by project contributors.
+
+---
+
+## Technologies Used
+
+* Python
+* UDP Sockets
+* Docker
+* Transport Layer Protocols
+* Network Performance Measurement
+
+---
+
+## What I Learned
+
+This project strengthened my understanding of:
+
+* Reliable transport mechanisms
+* How retransmission handles packet loss
+* Tradeoffs between throughput and latency
+* Practical implementation of transport-layer reliability over UDP
+
+---
+
+## Running the Project
+
+Start the provided receiver environment:
+
+```bash
+./start-simulator.sh
+```
+
+Run sender implementation:
+
+```bash
+python sender_stop_and_wait.py
+```
+
+---
+
+## Repository Notes
+
+This repository contains collaborative coursework implementations.
+
+My primary contribution focused on the Stop-and-Wait sender protocol.
